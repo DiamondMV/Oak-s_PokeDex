@@ -57,12 +57,12 @@ app.delete("/pokemons/:id", async (req, res, next) =>{
   try{
     const {id} = req.body;
     const deletePokemon = await Pokemon.findByPk(id);
-    if(!updatePokemon){
+    if(!deletePokemon){
       res.status(404).send(`Pokemon with id ${id} not found`)
       return;
     }
     await Pokemon.destroy({where: {id}});
-    res.send(updatePokemon);
+    res.send(deletePokemon);
   }
   catch(error){
     console.error(error);
