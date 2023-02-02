@@ -23,7 +23,35 @@ app.get("/pokemons", async (req, res, next) => {
       next(error);
     }
   });
+app.post("/pokemons", async (req, res, next) =>{
+  try{
+    const {name, type} = req.body;
+    const newPokemon = await Pokemon.create({name, type});
+    res.send(newPokemon);
+  }
+  catch(error){
+    console.error(error);
+    next(error);
+  }
+})
 
+app.put("/pokemons/:id", async (req, res, next) =>{
+  try{
+    const {id} = req.body;
+    const updatePokemon = await Pokemon.findByPk(id);
+    if(!updatePokemon){
+      res.status(404).send(`Pokemon with id ${id} not found`)
+      return;
+    }
+    const {name, type} = req.body;
+    await updatePokemon.update({name: name, type: type});
+    res.send(updatePokemon);
+  }
+  catch(error){
+    console.error(error);
+    next(error);
+  }
+})
 // error handling middleware
 app.use((error, req, res, next) => {
     console.error("SERVER ERROR: ", error);
