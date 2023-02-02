@@ -2,8 +2,6 @@ const express = require('express');
 const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
-//const PORT = 3000;
-
 
 const { User, Pokemon } = require("./db");
 
@@ -15,66 +13,66 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.get("/pokemons", async (req, res, next) => {
-    try {
-      const pokemons = await Pokemon.findAll();
-      res.send(pokemons);
-    } catch (error) {
-      console.error(error);
-      next(error);
-    }
-  });
+  try {
+    const pokemons = await Pokemon.findAll();
+    res.send(pokemons);
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
 
 app.get("/pokemons/:id", async (req, res, next) => {
   try {
     const id = req.params.id;
     const pokemons = await Pokemon.findByPk(id);
-      res.send(pokemons);
+    res.send(pokemons);
   } catch (error) {
     console.error(error);
     next(error);
   }
-});  
+});
 
 app.post('/pokemons', async (req, res, next) => {
   try {
-    const {name, type} = req.body;
-    const newPokemon = await Pokemon.create({name, type});
-    res.send({name: newPokemon.name, type: newPokemon.type});
-  }catch(error){
+    const { name, type } = req.body;
+    const newPokemon = await Pokemon.create({ name, type });
+    res.send({ name: newPokemon.name, type: newPokemon.type });
+  } catch (error) {
     next(error)
   }
 })
 
-app.put("/pokemons/:id", async (req, res, next) =>{
-  try{
+app.put("/pokemons/:id", async (req, res, next) => {
+  try {
     const id = req.params.id;
     const updatePokemon = await Pokemon.findByPk(id);
-    if(!updatePokemon){
+    if (!updatePokemon) {
       res.status(404).send(`Pokemon with id ${id} not found`)
       return;
     }
-    const {name, type} = req.body;
-    await updatePokemon.update({name: name, type: type});
+    const { name, type } = req.body;
+    await updatePokemon.update({ name: name, type: type });
     res.send(updatePokemon);
   }
-  catch(error){
+  catch (error) {
     console.error(error);
     next(error);
   }
 })
 
-app.delete("/pokemons/:id", async (req, res, next) =>{
-  try{
+app.delete("/pokemons/:id", async (req, res, next) => {
+  try {
     const id = req.params.id;
     const deletePokemon = await Pokemon.findByPk(id);
-    if(!deletePokemon){
+    if (!deletePokemon) {
       res.status(404).send(`Pokemon with id ${id} not found`)
       return;
     }
-    await Pokemon.destroy({where: {id}});
+    await Pokemon.destroy({ where: { id } });
     res.send(deletePokemon);
   }
-  catch(error){
+  catch (error) {
     console.error(error);
     next(error);
   }
