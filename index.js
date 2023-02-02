@@ -52,6 +52,23 @@ app.put("/pokemons/:id", async (req, res, next) =>{
     next(error);
   }
 })
+
+app.delete("/pokemons/:id", async (req, res, next) =>{
+  try{
+    const {id} = req.body;
+    const deletePokemon = await Pokemon.findByPk(id);
+    if(!updatePokemon){
+      res.status(404).send(`Pokemon with id ${id} not found`)
+      return;
+    }
+    await Pokemon.destroy({where: {id}});
+    res.send(updatePokemon);
+  }
+  catch(error){
+    console.error(error);
+    next(error);
+  }
+})
 // error handling middleware
 app.use((error, req, res, next) => {
     console.error("SERVER ERROR: ", error);
