@@ -17,9 +17,9 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cyx95/Oak-s_PokeDex/issues"
+    "url": "https://github.com/DiamondMV/Oak-s_PokeDex/issues"
   },
-  "homepage": "https://github.com/cyx95/Oak-s_PokeDex#readme",
+  "homepage": "https://github.com/DiamondMV/Oak-s_PokeDex#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
