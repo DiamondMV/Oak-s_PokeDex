@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
-const PORT = 3000;
+//const PORT = 3000;
 
 
 const { User, Pokemon } = require("./db");
@@ -23,21 +23,31 @@ app.get("/pokemons", async (req, res, next) => {
       next(error);
     }
   });
-app.post("/pokemons", async (req, res, next) =>{
-  try{
-    const {name, type} = req.body;
-    const newPokemon = await Pokemon.create({name, type});
-    res.send(newPokemon);
-  }
-  catch(error){
+
+app.get("/pokemons/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const pokemons = await Pokemon.findByPk(id);
+      res.send(pokemons);
+  } catch (error) {
     console.error(error);
     next(error);
+  }
+});  
+
+app.post('/pokemons', async (req, res, next) => {
+  try {
+    const {name, type} = req.body;
+    const newPokemon = await Pokemon.create({name, type});
+    res.send({name: newPokemon.name, type: newPokemon.type});
+  }catch(error){
+    next(error)
   }
 })
 
 app.put("/pokemons/:id", async (req, res, next) =>{
   try{
-    const {id} = req.body;
+    const id = req.params.id;
     const updatePokemon = await Pokemon.findByPk(id);
     if(!updatePokemon){
       res.status(404).send(`Pokemon with id ${id} not found`)
@@ -55,7 +65,7 @@ app.put("/pokemons/:id", async (req, res, next) =>{
 
 app.delete("/pokemons/:id", async (req, res, next) =>{
   try{
-    const {id} = req.body;
+    const id = req.params.id;
     const deletePokemon = await Pokemon.findByPk(id);
     if(!deletePokemon){
       res.status(404).send(`Pokemon with id ${id} not found`)
@@ -69,13 +79,12 @@ app.delete("/pokemons/:id", async (req, res, next) =>{
     next(error);
   }
 })
+
 // error handling middleware
 app.use((error, req, res, next) => {
-    console.error("SERVER ERROR: ", error);
-    if (res.statusCode < 400) res.status(500);
-    res.send({ error: error.message, name: error.name, message: error.message });
-  });
-  
-  app.listen(PORT, () => {
-    console.log(`Pokemons are ready at http://localhost:${PORT}`);
-  });
+  console.error("SERVER ERROR: ", error);
+  if (res.statusCode < 400) res.status(500);
+  res.send({ error: error.message, name: error.name, message: error.message });
+});
+
+module.exports = app;
