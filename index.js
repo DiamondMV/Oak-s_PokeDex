@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
+const bcrypt = require("bcrypt");
 
 const { User, Pokemon } = require("./db");
 
@@ -41,7 +42,7 @@ app.post('/pokemons', async (req, res, next) => {
   } catch (error) {
     next(error)
   }
-})
+});
 
 app.put("/pokemons/:id", async (req, res, next) => {
   try {
@@ -59,7 +60,7 @@ app.put("/pokemons/:id", async (req, res, next) => {
     console.error(error);
     next(error);
   }
-})
+});
 
 app.delete("/pokemons/:id", async (req, res, next) => {
   try {
@@ -76,7 +77,54 @@ app.delete("/pokemons/:id", async (req, res, next) => {
     console.error(error);
     next(error);
   }
-})
+});
+
+// bcrypt login
+
+app.get('/', async (req, res, next) => {
+  try {
+    res.send('<h1>Welcome Oaks Pokedex!</h1><p>Log in via POST /login or register via POST /register</p>');
+  } catch (error) {
+    console.error(error);
+    next(error)
+  }
+});
+
+app.post('/register', async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ username: username, password: hashedPass });
+    console.log("newUser: ", newUser);
+    //console.log("newUser get: " + newUser.get({plain: true}));
+    res.send("successfully created user " + newUser.username);
+  }
+  catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
+
+app.post('/login', async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const foundUser = await User.findOne({ where: { username } });
+    console.log("foundUser: ", foundUser);
+    const isMatch = await bcrypt.compare(password, foundUser.password);
+    console.log(isMatch);
+    if (isMatch) {
+      res.send("successfully logged in user " + username);
+    }
+    else {
+      res.send("incorrect username or password");
+    }
+  }
+  catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
+
 
 // error handling middleware
 app.use((error, req, res, next) => {
