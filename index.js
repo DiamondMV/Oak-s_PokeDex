@@ -83,7 +83,7 @@ app.delete("/pokemons/:id", async (req, res, next) => {
 
 app.get('/', async (req, res, next) => {
   try {
-    res.send('<h1>Welcome Oaks Pokedex!</h1><p>Log in via POST /login or register via POST /register</p>');
+    res.send('<h1>Welcome to Oaks PokeDex!</h1><p>Log in via POST /login or register via POST /register</p>');
   } catch (error) {
     console.error(error);
     next(error)
