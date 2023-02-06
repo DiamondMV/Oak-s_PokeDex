@@ -3,6 +3,8 @@ const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const {JWT_SECRET} = process.env;
 
 const { User, Pokemon } = require("./db");
 
@@ -95,9 +97,8 @@ app.post('/register', async (req, res, next) => {
     const { username, password } = req.body;
     const hashedPass = await bcrypt.hash(password, 10);
     const newUser = await User.create({ username: username, password: hashedPass });
-    console.log("newUser: ", newUser);
-    //console.log("newUser get: " + newUser.get({plain: true}));
-    res.send("successfully created user " + newUser.username);
+    const token = jwt.sign(newUser.username, newUser.password);
+    res.send({message: "success", token});
   }
   catch (error) {
     console.error(error);
@@ -113,10 +114,11 @@ app.post('/login', async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, foundUser.password);
     console.log(isMatch);
     if (isMatch) {
-      res.send("successfully logged in user " + username);
+      const token = jwt.sign(foundUser.username, foundUser.password);
+      res.send({message: "success", token});
     }
     else {
-      res.send("incorrect username or password");
+      res.sendStatus(401);
     }
   }
   catch (error) {
@@ -125,6 +127,16 @@ app.post('/login', async (req, res, next) => {
   }
 });
 
+// user debug
+app.get("/users", async (req, res, next) => {
+  try {
+    const users = await User.findAll();
+    res.send(users);
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
 
 // error handling middleware
 app.use((error, req, res, next) => {
