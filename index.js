@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const {JWT_SECRET} = process.env;
+const { auth } = require('express-openid-connect');
 
 const { User, Pokemon } = require("./db");
 
@@ -82,7 +83,6 @@ app.delete("/pokemons/:id", async (req, res, next) => {
 });
 
 // bcrypt login
-
 app.get('/', async (req, res, next) => {
   try {
     res.send('<h1>Welcome to Oaks PokeDex!</h1><p>Log in via POST /login or register via POST /register</p>');
@@ -127,7 +127,7 @@ app.post('/login', async (req, res, next) => {
   }
 });
 
-// user debug
+// user get
 app.get("/users", async (req, res, next) => {
   try {
     const users = await User.findAll();
