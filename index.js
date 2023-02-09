@@ -23,7 +23,7 @@ const {
 } = process.env;
 
 const config = {
-  authRequired: true,
+  authRequired: false,
   auth0Logout: true,
   secret: AUTH0_SECRET,
   baseURL: AUTH0_AUDIENCE,
@@ -32,24 +32,6 @@ const config = {
 };
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 app.use(auth(config));
-
-// authentication middleware
-const setUser = async (req, res, next) => {
-  try {
-    const auth = req.header('Authorization')
-    if (!auth) {
-      next();
-    } else {
-      const [, token] = auth.split(' ');
-      const user = jwt.verify(token, JWT_SECRET);
-      req.user = user;
-      next();
-    }
-  } catch ({ message }) {
-    res.sendStatus(401)
-    next({ message })
-  }
-}
 
 app.use(async (req, res, next) => {
   try {
@@ -69,6 +51,26 @@ app.use(async (req, res, next) => {
     next(error);
   }
 });
+
+// authentication middleware
+app.use(async (req, res, next) => {
+  try {
+    const auth = req.header('Authorization')
+    if (!auth) {
+      next();
+    } else {
+      const [, token] = auth.split(' ');
+      const user = jwt.verify(token, JWT_SECRET);
+      req.user = user;
+      next();
+    }
+  } catch ({ message }) {
+    res.sendStatus(401)
+    next({ message })
+  }
+})
+
+
 
 app.get('/', async (req, res, next) => {
   res.send(req.oidc.isAuthenticated() ? `
@@ -106,40 +108,40 @@ app.get("/me", async (req, res, next) => {
   }
 })
 
-app.post('/register', async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const hashedPass = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ username: username, password: hashedPass });
-    const token = jwt.sign(newUser.username, newUser.password);
-    res.send({ message: "success", token });
-  }
-  catch (error) {
-    console.error(error);
-    next(error);
-  }
-});
+// app.post('/register', async (req, res, next) => {
+//   try {
+//     const { username, password } = req.body;
+//     const hashedPass = await bcrypt.hash(password, 10);
+//     const newUser = await User.create({ username: username, password: hashedPass });
+//     const token = jwt.sign(newUser.username, newUser.password);
+//     res.send({ message: "success", token });
+//   }
+//   catch (error) {
+//     console.error(error);
+//     next(error);
+//   }
+// });
 
-app.post('/login', async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const foundUser = await User.findOne({ where: { username } });
-    console.log("foundUser: ", foundUser);
-    const isMatch = await bcrypt.compare(password, foundUser.password);
-    console.log(isMatch);
-    if (isMatch) {
-      const token = jwt.sign(foundUser.username, foundUser.password);
-      res.send({ message: "success", token });
-    }
-    else {
-      res.sendStatus(401);
-    }
-  }
-  catch (error) {
-    console.error(error);
-    next(error);
-  }
-});
+// app.post('/login', async (req, res, next) => {
+//   try {
+//     const { username, password } = req.body;
+//     const foundUser = await User.findOne({ where: { username } });
+//     console.log("foundUser: ", foundUser);
+//     const isMatch = await bcrypt.compare(password, foundUser.password);
+//     console.log(isMatch);
+//     if (isMatch) {
+//       const token = jwt.sign(foundUser.username, foundUser.password);
+//       res.send({ message: "success", token });
+//     }
+//     else {
+//       res.sendStatus(401);
+//     }
+//   }
+//   catch (error) {
+//     console.error(error);
+//     next(error);
+//   }
+// });
 
 // user get
 app.get("/users", async (req, res, next) => {
@@ -151,8 +153,6 @@ app.get("/users", async (req, res, next) => {
     next(error);
   }
 });
-
-
 
 app.get("/pokemons", async (req, res, next) => {
   try {
@@ -176,10 +176,16 @@ app.get("/pokemons/:id", async (req, res, next) => {
 
 app.post('/pokemons', async (req, res, next) => {
   try {
-    const ownerId = req.user.id;
-    const { name, type } = req.body;
-    const createPokemon = await Pokemon.create({ name, type, ownerId });
-    res.status(201).send({ name: createPokemon.name, type: createPokemon.type });
+    if (!req.user) {
+      res.sendStatus(401);
+    }
+    else {
+      const ownerId = req.user.id;
+      const { name, type } = req.body;
+      const createPokemon = await Pokemon.create({ name, type, ownerId });
+      res.status(201).send({ name: createPokemon.name, type: createPokemon.type });
+    }
+
   } catch (error) {
     next(error)
   }
