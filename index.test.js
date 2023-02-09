@@ -3,9 +3,13 @@ const { sequelize, User } = require('./db');
 const request = require('supertest');
 const seed = require('./db/seedFn');
 const seedData = require('./db/seedData');
+const jwt = require("jsonwebtoken");
+const {JWT_SECRET} = process.env;
 
 describe('Endpoints', () => {
     const testUserData = { username: 'bobbysmiles', password: 'youllneverguess' };
+    let user;
+    let token;
     let registerResponse;
     let loginResponse;
     
@@ -31,9 +35,12 @@ describe('Endpoints', () => {
     });
 
     describe('POST /register', () => {
-        it('should send back success with username', async () => {
+        it('should send back success with token', async () => {
             expect(registerResponse.status).toBe(200);
-            expect(registerResponse.text).toBe('successfully created user bobbysmiles');
+            expect(registerResponse.body).toEqual({
+                message: 'success',
+                token: expect.stringMatching(/^[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+$/)
+            });
         });
         it('should create user with username', async () => {
             const foundUser = await User.findOne({ where: { username: 'bobbysmiles' } });
@@ -49,9 +56,12 @@ describe('Endpoints', () => {
     });
 
     describe('POST /login', () => {
-        it('should send back success with username', async () => {
+        it('should send back success with token', async () => {
             expect(loginResponse.status).toBe(200);
-            expect(loginResponse.text).toBe('successfully logged in user bobbysmiles');
+            expect(loginResponse.body).toEqual({
+                message: 'success',
+                token: expect.stringMatching(/^[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+$/)
+            });
         });
         it('if password incorrect, should send back 401 unauthorized, with message', async () => {
             const incorrectLoginResponse = await request(app)
@@ -61,7 +71,8 @@ describe('Endpoints', () => {
                     password: 'notright'
                 })
                 .catch(err => console.error(err));
-            expect(incorrectLoginResponse.text).toBe('incorrect username or password');
+            expect(incorrectLoginResponse.status).toBe(401);
+            expect(incorrectLoginResponse.text).toBe('Unauthorized');
         });
     });
 });
