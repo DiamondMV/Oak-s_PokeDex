@@ -1,11 +1,11 @@
-const express = require('express');
+const express = require("express");
 const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const {JWT_SECRET} = process.env;
-const { auth } = require('express-openid-connect');
+const { JWT_SECRET } = process.env;
+const { auth } = require("express-openid-connect");
 
 const { User, Pokemon } = require("./db");
 
@@ -14,7 +14,6 @@ app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 app.get("/pokemons", async (req, res, next) => {
   try {
@@ -26,10 +25,16 @@ app.get("/pokemons", async (req, res, next) => {
   }
 });
 
-app.get("/pokemons/:id", async (req, res, next) => {
+app.get("/pokemons/:id/user", async (req, res, next) => {
   try {
     const id = req.params.id;
-    const pokemons = await Pokemon.findByPk(id);
+    const pokemons = await Pokemon.findByPk(id, {
+      include: [
+        {
+          model: User,
+        },
+      ],
+    });
     res.send(pokemons);
   } catch (error) {
     console.error(error);
@@ -37,13 +42,18 @@ app.get("/pokemons/:id", async (req, res, next) => {
   }
 });
 
-app.post('/pokemons', async (req, res, next) => {
+app.post("/pokemons", async (req, res, next) => {
   try {
-    const { name, type } = req.body;
-    const newPokemon = await Pokemon.create({ name, type });
-    res.send({ name: newPokemon.name, type: newPokemon.type });
+    if (!req.user) {
+      res.sendStatus(404);
+    } else {
+      const userId = req.user.id;
+      const { name, type } = req.body;
+      const newPokemon = await Pokemon.create({ name, type, userId });
+      res.send({ name: newPokemon.name, type: newPokemon.type });
+    }
   } catch (error) {
-    next(error)
+    next(error);
   }
 });
 
@@ -52,14 +62,13 @@ app.put("/pokemons/:id", async (req, res, next) => {
     const id = req.params.id;
     const updatePokemon = await Pokemon.findByPk(id);
     if (!updatePokemon) {
-      res.status(404).send(`Pokemon with id ${id} not found`)
+      res.status(404).send(`Pokemon with id ${id} not found`);
       return;
     }
     const { name, type } = req.body;
     await updatePokemon.update({ name: name, type: type });
     res.send(updatePokemon);
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
     next(error);
   }
@@ -70,43 +79,46 @@ app.delete("/pokemons/:id", async (req, res, next) => {
     const id = req.params.id;
     const deletePokemon = await Pokemon.findByPk(id);
     if (!deletePokemon) {
-      res.status(404).send(`Pokemon with id ${id} not found`)
+      res.status(404).send(`Pokemon with id ${id} not found`);
       return;
     }
     await Pokemon.destroy({ where: { id } });
     res.send(deletePokemon);
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
     next(error);
   }
 });
 
 // bcrypt login
-app.get('/', async (req, res, next) => {
+app.get("/", async (req, res, next) => {
   try {
-    res.send('<h1>Welcome to Oaks PokeDex!</h1><p>Log in via POST /login or register via POST /register</p>');
+    res.send(
+      "<h1>Welcome to Oaks PokeDex!</h1><p>Log in via POST /login or register via POST /register</p>"
+    );
   } catch (error) {
-    console.error(error);
-    next(error)
-  }
-});
-
-app.post('/register', async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const hashedPass = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ username: username, password: hashedPass });
-    const token = jwt.sign(newUser.username, newUser.password);
-    res.send({message: "success", token});
-  }
-  catch (error) {
     console.error(error);
     next(error);
   }
 });
 
-app.post('/login', async (req, res, next) => {
+app.post("/register", async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      username: username,
+      password: hashedPass,
+    });
+    const token = jwt.sign(newUser.username, newUser.password);
+    res.send({ message: "success", token });
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
+
+app.post("/login", async (req, res, next) => {
   try {
     const { username, password } = req.body;
     const foundUser = await User.findOne({ where: { username } });
@@ -115,13 +127,11 @@ app.post('/login', async (req, res, next) => {
     console.log(isMatch);
     if (isMatch) {
       const token = jwt.sign(foundUser.username, foundUser.password);
-      res.send({message: "success", token});
-    }
-    else {
+      res.send({ message: "success", token });
+    } else {
       res.sendStatus(401);
     }
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
     next(error);
   }
