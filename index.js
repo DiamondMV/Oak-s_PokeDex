@@ -25,17 +25,18 @@ app.get("/pokemons", async (req, res, next) => {
   }
 });
 
-app.get("/pokemons/:id/user", async (req, res, next) => {
+app.get("/pokemons/:id", async (req, res, next) => {
   try {
     const id = req.params.id;
-    const pokemons = await Pokemon.findByPk(id, {
+    const pokemon = await Pokemon.findByPk(id, {
       include: [
         {
           model: User,
+          attributes: { exclude: "password" },
         },
       ],
     });
-    res.send(pokemons);
+    res.send(pokemon);
   } catch (error) {
     console.error(error);
     next(error);
