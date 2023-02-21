@@ -8,12 +8,7 @@ const jwt = require("jsonwebtoken");
 const { JWT_SECRET } = process.env;
 const { User, Pokemon } = require("./db");
 const { auth } = require('express-openid-connect');
-
-// middleware
-app.use(cors());
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const { requiresAuth } = require('express-openid-connect');
 
 const {
   AUTH0_SECRET,
@@ -22,35 +17,46 @@ const {
   AUTH0_BASE_URL,
 } = process.env;
 
+// middleware
+app.use(cors());
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
 const config = {
-  authRequired: false,
+  authRequired: true,
   auth0Logout: true,
   secret: AUTH0_SECRET,
   baseURL: AUTH0_AUDIENCE,
   clientID: AUTH0_CLIENT_ID,
   issuerBaseURL: AUTH0_BASE_URL
 };
+
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 app.use(auth(config));
 
-app.use(async (req, res, next) => {
-  try {
-    const [user] = await User.findOrCreate({
-      where: {
-        username: `${req.oidc.user.nickname}`,
-        name: `${req.oidc.user.name}`,
-        email: `${req.oidc.user.email}`
-      }
-    });
-    console.log('user: ', req.oidc.user)
-    console.log('username: ', req.oidc.user.username)
-    console.log(user)
-    next();
-  }
-  catch (error) {
-    next(error);
-  }
+app.get('/profile', requiresAuth(), (req, res) => {
+  res.send(JSON.stringify(req.oidc.user));
 });
+// app.use(async (req, res, next) => {
+//   try {
+//     const [user] = await User.findOrCreate({
+//       where: {
+//         username: `${req.oidc.user.nickname}`,
+//         name: `${req.oidc.user.name}`,
+//         email: `${req.oidc.user.email}`
+//       }
+//     });
+//     console.log('user: ', req.oidc.user)
+//     console.log('username: ', req.oidc.user.username)
+//     console.log(user)
+//     next();
+//   }
+//   catch (error) {
+//     next(error);
+//   }
+// });
 
 // authentication middleware
 app.use(async (req, res, next) => {
@@ -69,7 +75,6 @@ app.use(async (req, res, next) => {
     next({ message })
   }
 })
-
 
 
 app.get('/', async (req, res, next) => {
@@ -108,40 +113,40 @@ app.get("/me", async (req, res, next) => {
   }
 })
 
-// app.post('/register', async (req, res, next) => {
-//   try {
-//     const { username, password } = req.body;
-//     const hashedPass = await bcrypt.hash(password, 10);
-//     const newUser = await User.create({ username: username, password: hashedPass });
-//     const token = jwt.sign(newUser.username, newUser.password);
-//     res.send({ message: "success", token });
-//   }
-//   catch (error) {
-//     console.error(error);
-//     next(error);
-//   }
-// });
+app.post('/register', async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ username: username, password: hashedPass });
+    const token = jwt.sign(newUser.username, newUser.password);
+    res.send({ message: "success", token });
+  }
+  catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
 
-// app.post('/login', async (req, res, next) => {
-//   try {
-//     const { username, password } = req.body;
-//     const foundUser = await User.findOne({ where: { username } });
-//     console.log("foundUser: ", foundUser);
-//     const isMatch = await bcrypt.compare(password, foundUser.password);
-//     console.log(isMatch);
-//     if (isMatch) {
-//       const token = jwt.sign(foundUser.username, foundUser.password);
-//       res.send({ message: "success", token });
-//     }
-//     else {
-//       res.sendStatus(401);
-//     }
-//   }
-//   catch (error) {
-//     console.error(error);
-//     next(error);
-//   }
-// });
+app.post('/login', async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const foundUser = await User.findOne({ where: { username } });
+    console.log("foundUser: ", foundUser);
+    const isMatch = await bcrypt.compare(password, foundUser.password);
+    console.log(isMatch);
+    if (isMatch) {
+      const token = jwt.sign(foundUser.username, foundUser.password);
+      res.send({ message: "success", token });
+    }
+    else {
+      res.sendStatus(401);
+    }
+  }
+  catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
 
 // user get
 app.get("/users", async (req, res, next) => {
