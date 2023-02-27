@@ -182,6 +182,7 @@ app.get("/users/:id", async (req, res, next) => {
           where : { ownerid : id }
         },
       ],
+      attributes: { exclude: ["password", "isAdmin"] },
     });
     res.send(user);
   } catch (error) {
