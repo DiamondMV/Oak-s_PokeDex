@@ -33,6 +33,8 @@ const config = {
   issuerBaseURL: AUTH0_BASE_URL
 };
 
+
+
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 app.use(auth(config));
 
@@ -77,7 +79,7 @@ app.use(async (req, res, next) => {
 })
 
 
-app.get('/', async (req, res, next) => {
+app.get('/', requiresAuth(), async (req, res, next) => {
   res.send(req.oidc.isAuthenticated() ? `
     <h2 style="text-align: center;">Welcome to Professor Oak's PokeDex!</h2>
     <h2>Welcome, ${req.oidc.user.name}</h2>
@@ -113,40 +115,40 @@ app.get("/me", async (req, res, next) => {
   }
 })
 
-app.post('/register', async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const hashedPass = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ username: username, password: hashedPass });
-    const token = jwt.sign(newUser.username, newUser.password);
-    res.send({ message: "success", token });
-  }
-  catch (error) {
-    console.error(error);
-    next(error);
-  }
-});
+// app.post('/register', async (req, res, next) => {
+//   try {
+//     const { username, password } = req.body;
+//     const hashedPass = await bcrypt.hash(password, 10);
+//     const newUser = await User.create({ username: username, password: hashedPass });
+//     const token = jwt.sign(newUser.username, newUser.password);
+//     res.send({ message: "success", token });
+//   }
+//   catch (error) {
+//     console.error(error);
+//     next(error);
+//   }
+// });
 
-app.post('/login', async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-    const foundUser = await User.findOne({ where: { username } });
-    console.log("foundUser: ", foundUser);
-    const isMatch = await bcrypt.compare(password, foundUser.password);
-    console.log(isMatch);
-    if (isMatch) {
-      const token = jwt.sign(foundUser.username, foundUser.password);
-      res.send({ message: "success", token });
-    }
-    else {
-      res.sendStatus(401);
-    }
-  }
-  catch (error) {
-    console.error(error);
-    next(error);
-  }
-});
+// app.post('/login', async (req, res, next) => {
+//   try {
+//     const { username, password } = req.body;
+//     const foundUser = await User.findOne({ where: { username } });
+//     console.log("foundUser: ", foundUser);
+//     const isMatch = await bcrypt.compare(password, foundUser.password);
+//     console.log(isMatch);
+//     if (isMatch) {
+//       const token = jwt.sign(foundUser.username, foundUser.password);
+//       res.send({ message: "success", token });
+//     }
+//     else {
+//       res.sendStatus(401);
+//     }
+//   }
+//   catch (error) {
+//     console.error(error);
+//     next(error);
+//   }
+// });
 
 // user get
 app.get("/users", async (req, res, next) => {
@@ -159,7 +161,7 @@ app.get("/users", async (req, res, next) => {
   }
 });
 
-app.get("/pokemons", async (req, res, next) => {
+app.get("/pokemons", requiresAuth(), async (req, res, next) => {
   try {
     const pokemons = await Pokemon.findAll();
     res.send(pokemons);
