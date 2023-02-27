@@ -10,7 +10,7 @@ const seed = async () => {
     const createdPokemons = await Pokemon.bulkCreate(pokemons);
     for(let i=0; i<createdPokemons.length; ++i){
         let pokemon = createdPokemons[i];
-        const userId = createdUsers[i % 3].id;
+        const userId = createdUsers[i % 4].id;
         await pokemon.setUser(userId);
     }
   } catch (error) {

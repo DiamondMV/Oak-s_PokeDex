@@ -15,9 +15,32 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const setUser = (async (req, res, next) => {
+  try {
+    const auth = req.header('Authorization')
+    if (!auth) {
+      next();
+    }
+    else {
+      const [, token] = auth.split(' ');
+      const user = jwt.verify(token, JWT_SECRET);
+      req.user = user;
+      next();
+    }
+  }
+  catch ({ message }) {
+    res.sendStatus(401)
+    next({ message })
+  }
+})
+
 app.get("/pokemons", async (req, res, next) => {
   try {
-    const pokemons = await Pokemon.findAll();
+    const { limit = 10, page = 1 } = req.query;
+    const pokemons = await Pokemon.findAll({
+      limit,
+      offset: limit * (page - 1)
+    });
     res.send(pokemons);
   } catch (error) {
     console.error(error);
@@ -32,7 +55,7 @@ app.get("/pokemons/:id", async (req, res, next) => {
       include: [
         {
           model: User,
-          attributes: { exclude: "password" },
+          attributes: { exclude: ["password", "isAdmin"] },
         },
       ],
     });
@@ -143,6 +166,24 @@ app.get("/users", async (req, res, next) => {
   try {
     const users = await User.findAll();
     res.send(users);
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+});
+
+app.get("/users/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const user = await User.findByPk(id, {
+      include: [
+        {
+          model: Pokemon,
+          where : { ownerid : id }
+        },
+      ],
+    });
+    res.send(user);
   } catch (error) {
     console.error(error);
     next(error);
