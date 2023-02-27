@@ -613,18 +613,28 @@ const users = [
     name: "Brett BePassed",
     password: "brettpass",
     email: "brett@example.com",
+    isAdmin : false
   },
   {
     username: "antonette",
     name: "Antonette Marie",
     password: "headfirst",
     email: "keepyourheadonstraight@example.com",
+    isAdmin : false
   },
   {
     username: "karianne",
     name: "Karianne Krum",
     password: "scarykary",
     email: "dontbefrightened@example.com",
+    isAdmin : false
+  },
+  {
+    username: "dantestAdmin",
+    name: "Daniel Wen",
+    password: "AdminTest",
+    email: "admindan@example.com",
+    isAdmin : true
   },
 ];
 
