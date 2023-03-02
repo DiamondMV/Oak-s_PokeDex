@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const { JWT_SECRET } = process.env;
 const { User, Pokemon } = require("./db");
 const { auth } = require('express-openid-connect');
-const { requiresAuth } = require('express-openid-connect');
+
 
 const {
   AUTH0_SECRET,
@@ -38,27 +38,24 @@ const config = {
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 app.use(auth(config));
 
-app.get('/profile', requiresAuth(), (req, res) => {
-  res.send(JSON.stringify(req.oidc.user));
+app.use(async (req, res, next) => {
+  try {
+    const [user] = await User.findOrCreate({
+      where: {
+        username: `${req.oidc.user.nickname}`,
+        name: `${req.oidc.user.name}`,
+        email: `${req.oidc.user.email}`
+      }
+    });
+    console.log('user: ', req.oidc.user)
+    console.log('username: ', req.oidc.user.username)
+    console.log(user)
+    next();
+  }
+  catch (error) {
+    next(error);
+  }
 });
-// app.use(async (req, res, next) => {
-//   try {
-//     const [user] = await User.findOrCreate({
-//       where: {
-//         username: `${req.oidc.user.nickname}`,
-//         name: `${req.oidc.user.name}`,
-//         email: `${req.oidc.user.email}`
-//       }
-//     });
-//     console.log('user: ', req.oidc.user)
-//     console.log('username: ', req.oidc.user.username)
-//     console.log(user)
-//     next();
-//   }
-//   catch (error) {
-//     next(error);
-//   }
-// });
 
 // authentication middleware
 app.use(async (req, res, next) => {
@@ -79,7 +76,7 @@ app.use(async (req, res, next) => {
 })
 
 
-app.get('/', requiresAuth(), async (req, res, next) => {
+app.get('/', async (req, res, next) => {
   res.send(req.oidc.isAuthenticated() ? `
     <h2 style="text-align: center;">Welcome to Professor Oak's PokeDex!</h2>
     <h2>Welcome, ${req.oidc.user.name}</h2>
@@ -161,7 +158,7 @@ app.get("/users", async (req, res, next) => {
   }
 });
 
-app.get("/pokemons", requiresAuth(), async (req, res, next) => {
+app.get("/pokemons", async (req, res, next) => {
   try {
     const pokemons = await Pokemon.findAll();
     res.send(pokemons);
