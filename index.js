@@ -1,13 +1,30 @@
+require('dotenv').config('.env');
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const morgan = require("morgan");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = process.env;
 const { auth } = require("express-openid-connect");
 
 const { User, Pokemon } = require("./db");
+
+const {
+  AUTH0_SECRET,
+  AUTH0_AUDIENCE,
+  AUTH0_CLIENT_ID,
+  AUTH0_BASE_URL,
+  JWT_SECRET,
+} = process.env;
+
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: AUTH0_SECRET,
+  baseURL: AUTH0_AUDIENCE,
+  clientID: AUTH0_CLIENT_ID,
+  issuerBaseURL: AUTH0_BASE_URL
+};
 
 // middleware
 app.use(cors());
@@ -15,7 +32,10 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const setUser = (async (req, res, next) => {
+// auth router attaches /login, /logout, and /callback routes to the baseURL
+app.use(auth(config));
+
+app.use(async (req, res, next) => {
   try {
     const auth = req.header('Authorization')
     if (!auth) {
@@ -33,6 +53,19 @@ const setUser = (async (req, res, next) => {
     next({ message })
   }
 })
+
+app.use(async (req, res, next) => {
+  if (req.oidc.user) {
+    const [user] = await User.findOrCreate({
+      where: {
+        username: req.oidc.user.nickname,
+        name: req.oidc.user.name,
+        email: req.oidc.user.email,
+      }
+    });
+  }
+  next();
+});
 
 app.get("/pokemons", async (req, res, next) => {
   try {
@@ -74,7 +107,7 @@ app.post("/pokemons", async (req, res, next) => {
       const userId = req.user.id;
       const { name, type } = req.body;
       const newPokemon = await Pokemon.create({ name, type, userId });
-      res.send({ name: newPokemon.name, type: newPokemon.type });
+      res.send({ name: newPokemon.name, type: newPokemon.type, userId});
     }
   } catch (error) {
     next(error);
@@ -89,8 +122,9 @@ app.put("/pokemons/:id", async (req, res, next) => {
       res.status(404).send(`Pokemon with id ${id} not found`);
       return;
     }
+    const userId = req.user.id;
     const { name, type } = req.body;
-    await updatePokemon.update({ name: name, type: type });
+    await updatePokemon.update({ name: name, type: type});
     res.send(updatePokemon);
   } catch (error) {
     console.error(error);
@@ -115,15 +149,14 @@ app.delete("/pokemons/:id", async (req, res, next) => {
 });
 
 // bcrypt login
-app.get("/", async (req, res, next) => {
-  try {
-    res.send(
-      "<h1>Welcome to Oaks PokeDex!</h1><p>Log in via POST /login or register via POST /register</p>"
-    );
-  } catch (error) {
-    console.error(error);
-    next(error);
-  }
+app.get('/', async (req, res, next) => {
+  res.send(req.oidc.isAuthenticated() ? `
+    <h2 style="text-align: center;">Welcome to Professor Oak's PokeDex!</h2>
+    <h2>Welcome, ${req.oidc.user.name}</h2>
+    <p><b>Username: ${req.oidc.user.email}</b></p>
+    <p><b>Email: ${req.oidc.user.email}</p>
+    <img src="${req.oidc.user.picture}" alt="${req.oidc.user.name}">
+    ` : 'Logged out');
 });
 
 app.post("/register", async (req, res, next) => {
@@ -161,6 +194,31 @@ app.post("/login", async (req, res, next) => {
   }
 });
 
+app.get("/me", async (req, res, next) => {
+  try {
+    // Find user with User.findOne
+    const user = await User.findOne({
+      where: {
+        username: req.oidc.user.nickname
+      },
+      raw: true,
+    });
+
+    // If/else statement - Assign token with user. No user, no token
+    if (user) {
+      const token = jwt.sign(user, JWT_SECRET, {expiresIn : '1w'});
+
+      // Send back the object {user, token}
+      res.send({ user, token })
+
+    } else {
+      res.status(401).send("No user");
+    }
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+})
 // user get
 app.get("/users", async (req, res, next) => {
   try {
