@@ -154,7 +154,7 @@ app.get('/', async (req, res, next) => {
     <h2 style="text-align: center;">Welcome to Professor Oak's PokeDex!</h2>
     <h2>Welcome, ${req.oidc.user.name}</h2>
     <p><b>Username: ${req.oidc.user.email}</b></p>
-    <p><b>Email: ${req.oidc.user.email}</b></p>
+    <p><b>Email: ${req.oidc.user.email}</p>
     <img src="${req.oidc.user.picture}" alt="${req.oidc.user.name}">
     <p><b>Go to /pokemons for a paginated list of pokemon</b></p>
     <p><b>Go to /pokemons/:id to see the pokemon and associated users</b></p>
